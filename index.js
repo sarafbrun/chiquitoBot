@@ -4,6 +4,7 @@ const { Telegraf } = require('telegraf');
 //me traigo una clase, para crear un objeto
 const { Configuration, OpenAIApi } = require('openai');
 const { chatGPT } = require('./utils');
+const googleTTS = require('google-tts-api');
 
 //Config .env -> esto lee el fichero de entorno y lo carga
 require('dotenv').config();
@@ -72,16 +73,25 @@ bot.command('tiempo', async ctx => {
 })
 
 bot.command('receta', async ctx => {
-    try {
-        //   /receta huevos, aguacate, chorizo
-        const ingredientes = ctx.message.text.substring(7).trim();
+    //   /receta huevos, aguacate, chorizo
+    const ingredientes = ctx.message.text.substring(7).trim();
 
+    try {
         const titulo = await chatGPT(`Dame el título de una receta que pueda cocinar con los siguientes ingredientes: ${ingredientes}`);
 
         const elaboracion = await chatGPT(`Dame la elaboración para la receta con este título: ${titulo}`);
 
-        ctx.reply(titulo);
-        ctx.reply(elaboracion);
+        //Transformación del título a audio:
+        const audioUrl = googleTTS.getAudioUrl(titulo, {
+            lang: 'es',
+            slow: false,
+            host: 'https:://translate.google.es'
+        });
+
+        //Ponerlas en este orden no significa que vayan en orden porque son promesas, si queremos asegurarnos de que van en este orden se les pone el await y marcarles los tiempos:
+        await ctx.reply(titulo);
+        await ctx.replyWithAudio(audioUrl);
+        await ctx.reply(elaboracion);
     } catch (error) {
         ctx.reply('No puedo responderte en estos momentos. Inténtalo más tarde.')
     }
